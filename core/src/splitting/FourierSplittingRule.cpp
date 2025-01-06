@@ -433,18 +433,30 @@ void FourierSplittingRule::find_split(const Data& data,
   std::vector<double> MMD(n-1, 0.0);
   
   for(size_t i = 0; i < num_features; ++i){
-    std::complex<double> sum(0, 0);
-    for(int j = 0; j < n; ++j) {
-      sum += fourier_features[i][j];
+    std::complex<double> sum_Y(0, 0), sum_Z(0, 0), sum_YZ(0, 0);
+    for(int j = 0; j < n/2; ++j) {
+      sum_Y += fourier_features[i][j];
+    }
+    for(int j = n/2; j < n; ++j) {
+      sum_Z += fourier_features[i][j];
+    }
+    for(int j = 0; j < n/2; ++j) {
+      sum_YZ += fourier_features[i][j]*fourier_features[i][j+n/2]; // find another way
     }
     
-    std::complex<double> sum_left(0, 0), sum_right(0, 0);
-    for(size_t j = 0;  j < (n-1); ++j){
-      sum_left += fourier_features[i][ordering[j]];
-      sum_right = sum - sum_left;
-      MMD[j] += ((j+1)*(n-j-1)/n)*pow(abs(sum_left/(double)(j+1) - sum_right/(double)(n-j-1)), 2) / num_features;
+    std::complex<double> sum_left_Y(0, 0), sum_right_Y(0, 0), sum_left_Z(0, 0), sum_right_Z(0, 0), sum_left_YZ(0, 0), sum_right_YZ(0, 0);
+    for(size_t j = 0;  j < (n/2-1); ++j){
+      sum_left_Y += fourier_features[i][ordering[j]];
+      sum_right_Y = sum_Y - sum_left_Y;
+      sum_left_Z += fourier_features[i][ordering[j+n/2]];
+      sum_right_Z = sum_Z - sum_left_Z;
+      sum_left_YZ += fourier_features[i][ordering[j]]*fourier_features[i][ordering[j+n/2]];
+      sum_right_YZ = sum_YZ - sum_left_YZ;
+      MMD[j] += ((j+1)*(n-j-1)/pow(n,2))*pow(abs(sum_left_YZ/(double)(j+1) - (sum_left_Y*sum_left_Z/pow((double)(j+1),2)) - sum_right_YZ/(double)(n-j-1) + (sum_right_Y*sum_right_Z/pow((double)(n-j-1),2))), 2) / num_features;
+
     }
-  }
+  }  
+  
   
   //std::cout << "variable: " << var << std::endl;
   //std::cout << "MMD: " << n << std::endl;
